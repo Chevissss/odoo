@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Template de Confirmación -->
+    <template id="website_confirmacion_template" name="Confirmación de Reserva">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <section class="pt-5 pb-5">
+                    <div class="container">
+                        <div class="row justify-content-center">
+                            <div class="col-lg-8">
+                                <div class="card shadow text-center">
+                                    <div class="card-body p-5">
+                                        <div class="mb-4">
+                                            <i class="fa fa-check-circle fa-5x text-success"/>
+                                        </div>
+                                        <h2 class="text-success mb-3">¡Reserva Confirmada!</h2>
+                                        <p class="lead mb-4">
+                                            Tu reserva ha sido procesada exitosamente
+                                        </p>
+
+                                        <!-- Información de la Reserva -->
+                                        <div class="card bg-light mb-4">
+                                            <div class="card-body text-left">
+                                                <h5 class="card-title mb-3">
+                                                    <i class="fa fa-info-circle"/> Detalles de la Reserva
+                                                </h5>
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <strong>Número de Reserva:</strong><br/>
+                                                        <span class="h5 text-primary">
+                                                            <t t-esc="reserva.name"/>
+                                                        </span>
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <strong>Estado:</strong><br/>
+                                                        <span class="badge badge-success badge-lg">
+                                                            <t t-esc="dict(reserva._fields['estado'].selection).get(reserva.estado)"/>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <hr/>
+                                                <div class="row">
+                                                    <div class="col-md-12 mb-2">
+                                                        <strong><i class="fa fa-futbol-o"/> Cancha:</strong>
+                                                        <t t-esc="reserva.cancha_id.name"/>
+                                                    </div>
+                                                    <div class="col-md-6 mb-2">
+                                                        <strong><i class="fa fa-calendar"/> Fecha:</strong>
+                                                        <t t-esc="reserva.fecha.strftime('%d/%m/%Y')"/>
+                                                    </div>
+                                                    <div class="col-md-6 mb-2">
+                                                        <strong><i class="fa fa-clock-o"/> Horario:</strong>
+                                                        <t t-esc="'%02d:00' % int(reserva.hora_inicio)"/> - 
+                                                        <t t-esc="'%02d:00' % int(reserva.hora_fin)"/>
+                                                    </div>
+                                                    <div class="col-md-6 mb-2">
+                                                        <strong><i class="fa fa-hourglass-half"/> Duración:</strong>
+                                                        <t t-esc="int(reserva.duracion)"/> hora(s)
+                                                    </div>
+                                                    <div class="col-md-6 mb-2">
+                                                        <strong><i class="fa fa-money"/> Total:</strong>
+                                                        <span class="text-success">
+                                                            S/ <t t-esc="'%.2f' % reserva.monto_total"/>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Instrucciones -->
+                                        <div class="alert alert-info text-left">
+                                            <h6><i class="fa fa-lightbulb-o"/> Instrucciones Importantes:</h6>
+                                            <ul class="mb-0">
+                                                <li>Llega 10 minutos antes de tu hora de reserva</li>
+                                                <li>El pago se realizará en el local al llegar</li>
+                                                <li>Presenta tu número de reserva en recepción</li>
+                                                <li>Puedes cancelar tu reserva hasta 2 horas antes</li>
+                                            </ul>
+                                        </div>
+
+                                        <!-- Botones de Acción -->
+                                        <div class="row mt-4">
+                                            <div class="col-md-4 mb-2">
+                                                <a href="/mis-reservas" class="btn btn-primary btn-block">
+                                                    <i class="fa fa-list"/> Mis Reservas
+                                                </a>
+                                            </div>
+                                            <div class="col-md-4 mb-2">
+                                                <a href="/reservas" class="btn btn-success btn-block">
+                                                    <i class="fa fa-plus"/> Nueva Reserva
+                                                </a>
+                                            </div>
+                                            <div class="col-md-4 mb-2">
+                                                <button onclick="window.print()" class="btn btn-secondary btn-block">
+                                                    <i class="fa fa-print"/> Imprimir
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </t>
+    </template>
+
+    <!-- Template de Mis Reservas -->
+    <template id="website_mis_reservas_template" name="Mis Reservas">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <section class="pt-5 pb-5">
+                    <div class="container">
+                        <h2 class="mb-4">
+                            <i class="fa fa-calendar"/> Mis Reservas
+                        </h2>
+
+                        <!-- Alerta de cancelación -->
+                        <t t-if="request.params.get('cancelled')">
+                            <div class="alert alert-success alert-dismissible fade show">
+                                <i class="fa fa-check"/> Reserva cancelada exitosamente
+                                <button type="button" class="close" data-dismiss="alert">
+                                    <span>×</span>
+                                </button>
+                            </div>
+                        </t>
+
+                        <!-- Información del Cliente -->
+                        <t t-if="cliente">
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <strong>Nombre:</strong><br/>
+                                            <t t-esc="cliente.name"/>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <strong>Tipo de Cliente:</strong><br/>
+                                            <span class="badge badge-primary">
+                                                <t t-esc="dict(cliente._fields['tipo_cliente'].selection).get(cliente.tipo_cliente)"/>
+                                            </span>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <strong>Total de Reservas:</strong><br/>
+                                            <t t-esc="cliente.total_reservas"/>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <strong>Total Gastado:</strong><br/>
+                                            S/ <t t-esc="'%.2f' % cliente.total_gastado"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+
+                        <!-- Tabs para Reservas Activas y Pasadas -->
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-toggle="tab" href="#activas">
+                                    Reservas Activas 
+                                    <span class="badge badge-primary"><t t-esc="len(reservas_activas)"/></span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-toggle="tab" href="#pasadas">
+                                    Historial 
+                                    <span class="badge badge-secondary"><t t-esc="len(reservas_pasadas)"/></span>
+                                </a>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content pt-4">
+                            <!-- Reservas Activas -->
+                            <div id="activas" class="tab-pane fade show active">
+                                <t t-if="reservas_activas">
+                                    <div class="row">
+                                        <t t-foreach="reservas_activas" t-as="reserva">
+                                            <div class="col-md-6 mb-4">
+                                                <div class="card h-100 shadow-sm">
+                                                    <div class="card-header" t-att-class="'bg-success text-white' if reserva.estado == 'confirmada' else 'bg-info text-white'">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <span>
+                                                                <i class="fa fa-ticket"/> <t t-esc="reserva.name"/>
+                                                            </span>
+                                                            <span class="badge badge-light">
+                                                                <t t-esc="dict(reserva._fields['estado'].selection).get(reserva.estado)"/>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <h5 class="card-title">
+                                                            <i class="fa fa-futbol-o"/> <t t-esc="reserva.cancha_id.name"/>
+                                                        </h5>
+                                                        <p class="card-text">
+                                                            <i class="fa fa-calendar"/> 
+                                                            <strong><t t-esc="reserva.fecha.strftime('%d/%m/%Y')"/></strong>
+                                                            <br/>
+                                                            <i class="fa fa-clock-o"/> 
+                                                            <t t-esc="'%02d:00' % int(reserva.hora_inicio)"/> - 
+                                                            <t t-esc="'%02d:00' % int(reserva.hora_fin)"/>
+                                                            (<t t-esc="int(reserva.duracion)"/>h)
+                                                            <br/>
+                                                            <i class="fa fa-money"/> 
+                                                            <strong class="text-success">
+                                                                S/ <t t-esc="'%.2f' % reserva.monto_total"/>
+                                                            </strong>
+                                                        </p>
+                                                        <t t-if="reserva.notas">
+                                                            <p class="small text-muted">
+                                                                <i class="fa fa-sticky-note"/> <t t-esc="reserva.notas"/>
+                                                            </p>
+                                                        </t>
+                                                    </div>
+                                                    <div class="card-footer bg-transparent">
+                                                        <form method="POST" t-attf-action="/reservas/cancelar/#{reserva.id}" 
+                                                              onsubmit="return confirm('¿Estás seguro de cancelar esta reserva?');">
+                                                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                                            <button type="submit" class="btn btn-danger btn-sm btn-block"
+                                                                    t-if="reserva.estado in ['confirmada', 'borrador']">
+                                                                <i class="fa fa-times"/> Cancelar Reserva
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </t>
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div class="text-center py-5">
+                                        <i class="fa fa-calendar-times-o fa-5x text-muted mb-3"/>
+                                        <h4>No tienes reservas activas</h4>
+                                        <p class="text-muted">¡Reserva una cancha ahora!</p>
+                                        <a href="/reservas" class="btn btn-primary">
+                                            <i class="fa fa-plus"/> Nueva Reserva
+                                        </a>
+                                    </div>
+                                </t>
+                            </div>
+
+                            <!-- Historial de Reservas -->
+                            <div id="pasadas" class="tab-pane fade">
+                                <t t-if="reservas_pasadas">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Número</th>
+                                                    <th>Cancha</th>
+                                                    <th>Fecha</th>
+                                                    <th>Horario</th>
+                                                    <th>Monto</th>
+                                                    <th>Estado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-foreach="reservas_pasadas" t-as="reserva">
+                                                    <tr>
+                                                        <td><t t-esc="reserva.name"/></td>
+                                                        <td><t t-esc="reserva.cancha_id.name"/></td>
+                                                        <td><t t-esc="reserva.fecha.strftime('%d/%m/%Y')"/></td>
+                                                        <td>
+                                                            <t t-esc="'%02d:00' % int(reserva.hora_inicio)"/> - 
+                                                            <t t-esc="'%02d:00' % int(reserva.hora_fin)"/>
+                                                        </td>
+                                                        <td>S/ <t t-esc="'%.2f' % reserva.monto_total"/></td>
+                                                        <td>
+                                                            <span t-att-class="'badge badge-success' if reserva.estado == 'completada' else 'badge badge-secondary'">
+                                                                <t t-esc="dict(reserva._fields['estado'].selection).get(reserva.estado)"/>
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div class="text-center py-5">
+                                        <i class="fa fa-history fa-5x text-muted mb-3"/>
+                                        <h4>No tienes historial de reservas</h4>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </t>
+    </template>
+
+    <!-- Template de Error -->
+    <template id="website_error_template" name="Error">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <section class="pt-5 pb-5">
+                    <div class="container">
+                        <div class="row justify-content-center">
+                            <div class="col-lg-6 text-center">
+                                <i class="fa fa-exclamation-triangle fa-5x text-danger mb-4"/>
+                                <h2>¡Oops! Algo salió mal</h2>
+                                <p class="lead text-muted">
+                                    <t t-esc="error"/>
+                                </p>
+                                <a href="/reservas" class="btn btn-primary mt-3">
+                                    <i class="fa fa-arrow-left"/> Volver a Canchas
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </t>
+    </template>
+</odoo>

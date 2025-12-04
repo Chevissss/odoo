@@ -1,0 +1,230 @@
+/* Estilos personalizados para el módulo de Reservas */
+
+/* Efectos hover para tarjetas */
+.hover-shadow {
+    transition: all 0.3s ease;
+}
+
+.hover-shadow:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Horarios disponibles */
+.horario-slot {
+    padding: 15px;
+    margin: 5px;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    background-color: #fff;
+}
+
+.horario-slot:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+    transform: scale(1.05);
+}
+
+.horario-slot.disponible {
+    border-color: #28a745;
+    background-color: #d4edda;
+}
+
+.horario-slot.ocupado {
+    border-color: #dc3545;
+    background-color: #f8d7da;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.horario-slot.seleccionado {
+    border-color: #007bff;
+    background-color: #cce5ff;
+    font-weight: bold;
+}
+
+.horario-slot .hora {
+    font-size: 18px;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.horario-slot .precio {
+    font-size: 14px;
+    color: #6c757d;
+}
+
+/* Grid de horarios */
+.horarios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Badges personalizados */
+.badge-lg {
+    font-size: 14px;
+    padding: 8px 12px;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease;
+}
+
+/* Sección hero */
+.s_banner {
+    position: relative;
+    overflow: hidden;
+}
+
+.s_banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('/web/image/website.s_banner_default_image') no-repeat center;
+    background-size: cover;
+    opacity: 0.1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .horarios-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .horario-slot {
+        padding: 10px;
+    }
+    
+    .horario-slot .hora {
+        font-size: 16px;
+    }
+}
+
+/* Botones con iconos */
+.btn i {
+    margin-right: 5px;
+}
+
+/* Card header personalizado */
+.card-header h5 {
+    margin-bottom: 0;
+}
+
+/* Loader */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Calendario responsive */
+.calendar-responsive {
+    overflow-x: auto;
+}
+
+/* Estados de reserva */
+.estado-confirmada {
+    color: #28a745;
+}
+
+.estado-borrador {
+    color: #6c757d;
+}
+
+.estado-cancelada {
+    color: #dc3545;
+}
+
+.estado-completada {
+    color: #17a2b8;
+}
+
+/* Tooltips personalizados */
+.tooltip-inner {
+    max-width: 300px;
+}
+
+/* Alertas personalizadas */
+.alert {
+    border-radius: 8px;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+    background-color: transparent;
+    padding: 0;
+}
+
+/* Print styles */
+@media print {
+    .no-print,
+    header,
+    footer,
+    .btn,
+    .oe_chatter {
+        display: none !important;
+    }
+}
+
+/* Animación de pulso para botones importantes */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(0, 123, 255, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+    }
+}
+
+.btn-primary.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* Mejoras de accesibilidad */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Estilos para modo oscuro (opcional) */
+@media (prefers-color-scheme: dark) {
+    .card {
+        background-color: #2d3748;
+        color: #e2e8f0;
+    }
+    
+    .horario-slot {
+        background-color: #2d3748;
+        color: #e2e8f0;
+    }
+}

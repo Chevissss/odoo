@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Categoría del módulo -->
+        <record id="module_category_reserva_canchas" model="ir.module.category">
+            <field name="name">Reserva de Canchas</field>
+            <field name="description">Gestión de reservas de canchas deportivas</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <!-- Grupo: Staff (Recepcionista) -->
+        <record id="group_reserva_staff" model="res.groups">
+            <field name="name">Staff / Recepcionista</field>
+            <field name="category_id" ref="module_category_reserva_canchas"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+            <field name="comment">Puede crear reservas presenciales y gestionar clientes</field>
+        </record>
+
+        <!-- Grupo: Administrador -->
+        <record id="group_reserva_admin" model="res.groups">
+            <field name="name">Administrador</field>
+            <field name="category_id" ref="module_category_reserva_canchas"/>
+            <field name="implied_ids" eval="[(4, ref('group_reserva_staff'))]"/>
+            <field name="comment">Control total del sistema de reservas</field>
+        </record>
+
+        <!-- Reglas de registro para Staff -->
+        <record id="reserva_cancha_rule_staff" model="ir.rule">
+            <field name="name">Staff: Ver todas las canchas</field>
+            <field name="model_id" ref="model_reserva_cancha"/>
+            <field name="groups" eval="[(4, ref('group_reserva_staff'))]"/>
+            <field name="perm_read" eval="1"/>
+            <field name="perm_write" eval="0"/>
+            <field name="perm_create" eval="0"/>
+            <field name="perm_unlink" eval="0"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="reserva_reserva_rule_staff" model="ir.rule">
+            <field name="name">Staff: Gestionar reservas</field>
+            <field name="model_id" ref="model_reserva_reserva"/>
+            <field name="groups" eval="[(4, ref('group_reserva_staff'))]"/>
+            <field name="perm_read" eval="1"/>
+            <field name="perm_write" eval="1"/>
+            <field name="perm_create" eval="1"/>
+            <field name="perm_unlink" eval="1"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <!-- Reglas de registro para Admin -->
+        <record id="reserva_cancha_rule_admin" model="ir.rule">
+            <field name="name">Admin: Control total canchas</field>
+            <field name="model_id" ref="model_reserva_cancha"/>
+            <field name="groups" eval="[(4, ref('group_reserva_admin'))]"/>
+            <field name="perm_read" eval="1"/>
+            <field name="perm_write" eval="1"/>
+            <field name="perm_create" eval="1"/>
+            <field name="perm_unlink" eval="1"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+    </data>
+</odoo>

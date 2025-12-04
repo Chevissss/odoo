@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Detalle de Cancha con Calendario de Disponibilidad -->
+    <template id="website_cancha_detalle_template" name="Detalle de Cancha">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <section class="pt-5 pb-5">
+                    <div class="container">
+                        <!-- Breadcrumb -->
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/reservas">Canchas</a></li>
+                                <li class="breadcrumb-item active" t-esc="cancha.name"/>
+                            </ol>
+                        </nav>
+
+                        <div class="row">
+                            <!-- Imagen y detalles -->
+                            <div class="col-lg-6 mb-4">
+                                <t t-if="cancha.imagen">
+                                    <img t-att-src="'data:image/png;base64,%s' % cancha.imagen.decode('utf-8')" 
+                                         class="img-fluid rounded shadow" alt="Cancha"/>
+                                </t>
+                                <t t-else="">
+                                    <div class="bg-secondary d-flex align-items-center justify-content-center rounded" 
+                                         style="height: 400px;">
+                                        <i class="fa fa-image fa-5x text-white"/>
+                                    </div>
+                                </t>
+
+                                <div class="card mt-4">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0"><i class="fa fa-info-circle"/> Información de la Cancha</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2">
+                                                <strong>Código:</strong> <t t-esc="cancha.codigo"/>
+                                            </li>
+                                            <li class="mb-2">
+                                                <strong>Tipo de Deporte:</strong> 
+                                                <t t-esc="dict(cancha._fields['tipo_deporte'].selection).get(cancha.tipo_deporte)"/>
+                                            </li>
+                                            <li class="mb-2">
+                                                <strong>Superficie:</strong> 
+                                                <t t-esc="dict(cancha._fields['tipo_superficie'].selection).get(cancha.tipo_superficie)"/>
+                                            </li>
+                                            <li class="mb-2">
+                                                <strong>Capacidad:</strong> <t t-esc="cancha.capacidad"/> jugadores
+                                            </li>
+                                            <li class="mb-2">
+                                                <strong>Precio por hora:</strong> 
+                                                <span class="text-primary h5">S/ <t t-esc="'%.2f' % cancha.precio_hora"/></span>
+                                            </li>
+                                        </ul>
+
+                                        <!-- Características -->
+                                        <hr/>
+                                        <h6>Características:</h6>
+                                        <div>
+                                            <t t-if="cancha.techada">
+                                                <span class="badge badge-info mr-2 mb-2">
+                                                    <i class="fa fa-home"/> Techada
+                                                </span>
+                                            </t>
+                                            <t t-if="cancha.iluminacion">
+                                                <span class="badge badge-warning mr-2 mb-2">
+                                                    <i class="fa fa-lightbulb-o"/> Iluminación Nocturna
+                                                </span>
+                                            </t>
+                                            <t t-if="cancha.vestuarios">
+                                                <span class="badge badge-success mr-2 mb-2">
+                                                    <i class="fa fa-bath"/> Vestuarios
+                                                </span>
+                                            </t>
+                                            <t t-if="cancha.estacionamiento">
+                                                <span class="badge badge-secondary mr-2 mb-2">
+                                                    <i class="fa fa-car"/> Estacionamiento
+                                                </span>
+                                            </t>
+                                        </div>
+
+                                        <t t-if="cancha.descripcion">
+                                            <hr/>
+                                            <h6>Descripción:</h6>
+                                            <p t-esc="cancha.descripcion"/>
+                                        </t>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Calendario de Disponibilidad -->
+                            <div class="col-lg-6">
+                                <div class="card">
+                                    <div class="card-header bg-success text-white">
+                                        <h5 class="mb-0">
+                                            <i class="fa fa-calendar"/> Selecciona Fecha y Horario
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Selector de Fecha -->
+                                        <div class="form-group">
+                                            <label for="fecha_reserva">Fecha:</label>
+                                            <input type="date" 
+                                                   class="form-control" 
+                                                   id="fecha_reserva" 
+                                                   t-att-min="fecha_inicio.strftime('%Y-%m-%d')"
+                                                   t-att-max="fecha_fin.strftime('%Y-%m-%d')"
+                                                   t-att-value="fecha_inicio.strftime('%Y-%m-%d')"/>
+                                        </div>
+
+                                        <!-- Grid de Horarios -->
+                                        <div id="horarios_disponibles" class="mt-4">
+                                            <div class="text-center">
+                                                <div class="spinner-border text-primary" role="status">
+                                                    <span class="sr-only">Cargando...</span>
+                                                </div>
+                                                <p class="mt-2">Cargando horarios disponibles...</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Información de selección -->
+                                        <div id="seleccion_info" class="mt-4 alert alert-info" style="display: none;">
+                                            <h6>Resumen de tu reserva:</h6>
+                                            <p class="mb-1">
+                                                <strong>Fecha:</strong> <span id="info_fecha"></span>
+                                            </p>
+                                            <p class="mb-1">
+                                                <strong>Horario:</strong> <span id="info_horario"></span>
+                                            </p>
+                                            <p class="mb-1">
+                                                <strong>Duración:</strong> <span id="info_duracion"></span>
+                                            </p>
+                                            <p class="mb-0">
+                                                <strong>Total:</strong> 
+                                                <span class="text-primary h5">S/ <span id="info_total">0.00</span></span>
+                                            </p>
+                                        </div>
+
+                                        <!-- Botón de reservar -->
+                                        <button id="btn_reservar" 
+                                                class="btn btn-primary btn-lg btn-block mt-3" 
+                                                style="display: none;"
+                                                t-att-data-cancha-id="cancha.id">
+                                            <i class="fa fa-check"/> Continuar con la Reserva
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Script para manejo de disponibilidad -->
+            <script type="text/javascript">
+                var cancha_id = <t t-esc="cancha.id"/>;
+                var precio_hora = <t t-esc="cancha.precio_hora"/>;
+            </script>
+        </t>
+    </template>
+
+    <!-- Template de Formulario de Reserva -->
+    <template id="website_crear_reserva_template" name="Crear Reserva">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <section class="pt-5 pb-5">
+                    <div class="container">
+                        <div class="row justify-content-center">
+                            <div class="col-lg-8">
+                                <div class="card shadow">
+                                    <div class="card-header bg-primary text-white">
+                                        <h4 class="mb-0">
+                                            <i class="fa fa-calendar-plus-o"/> Confirmar Reserva
+                                        </h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <form action="/reservas/confirmar" method="POST" class="needs-validation">
+                                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                            <input type="hidden" name="cancha_id" t-att-value="cancha.id"/>
+                                            
+                                            <!-- Información de la Cancha -->
+                                            <div class="alert alert-info">
+                                                <h5><t t-esc="cancha.name"/></h5>
+                                                <p class="mb-0">
+                                                    Precio: S/ <t t-esc="'%.2f' % cancha.precio_hora"/> por hora
+                                                </p>
+                                            </div>
+
+                                            <!-- Datos del Cliente -->
+                                            <h5 class="mt-4 mb-3">Datos del Cliente</h5>
+                                            <div class="form-row">
+                                                <div class="form-group col-md-6">
+                                                    <label>Nombre Completo</label>
+                                                    <input type="text" class="form-control" 
+                                                           t-att-value="partner.name" readonly="1"/>
+                                                </div>
+                                                <div class="form-group col-md-6">
+                                                    <label>Email</label>
+                                                    <input type="email" class="form-control" 
+                                                           t-att-value="partner.email" readonly="1"/>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Teléfono *</label>
+                                                <input type="tel" class="form-control" name="telefono" 
+                                                       t-att-value="cliente.telefono if cliente else partner.phone" 
+                                                       required="1"/>
+                                            </div>
+
+                                            <!-- Datos de la Reserva -->
+                                            <h5 class="mt-4 mb-3">Datos de la Reserva</h5>
+                                            <div class="form-row">
+                                                <div class="form-group col-md-4">
+                                                    <label>Fecha *</label>
+                                                    <input type="date" class="form-control" name="fecha" 
+                                                           t-att-value="fecha" required="1" readonly="1"/>
+                                                </div>
+                                                <div class="form-group col-md-4">
+                                                    <label>Hora Inicio *</label>
+                                                    <input type="number" class="form-control" name="hora_inicio" 
+                                                           t-att-value="hora_inicio" min="6" max="22" 
+                                                           required="1" readonly="1" step="1"/>
+                                                </div>
+                                                <div class="form-group col-md-4">
+                                                    <label>Hora Fin *</label>
+                                                    <input type="number" class="form-control" name="hora_fin" 
+                                                           t-att-value="int(hora_inicio) + 1" min="7" max="23" 
+                                                           required="1" id="hora_fin" step="1"/>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Notas Adicionales</label>
+                                                <textarea class="form-control" name="notas" rows="3" 
+                                                          placeholder="Información adicional sobre tu reserva..."></textarea>
+                                            </div>
+
+                                            <!-- Resumen -->
+                                            <div class="alert alert-success">
+                                                <h5>Resumen de Pago</h5>
+                                                <p class="mb-1">
+                                                    Total a pagar: <strong class="h4 text-success">S/ <span id="total_pago">0.00</span></strong>
+                                                </p>
+                                                <small class="text-muted">
+                                                    El pago se realizará al momento de llegar a la cancha
+                                                </small>
+                                            </div>
+
+                                            <!-- Términos y Condiciones -->
+                                            <div class="form-group form-check">
+                                                <input type="checkbox" class="form-check-input" id="terminos" required="1"/>
+                                                <label class="form-check-label" for="terminos">
+                                                    Acepto los términos y condiciones de reserva
+                                                </label>
+                                            </div>
+
+                                            <!-- Botones -->
+                                            <div class="form-row">
+                                                <div class="col-md-6">
+                                                    <a href="/reservas" class="btn btn-secondary btn-block">
+                                                        <i class="fa fa-arrow-left"/> Cancelar
+                                                    </a>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <button type="submit" class="btn btn-success btn-block">
+                                                        <i class="fa fa-check"/> Confirmar Reserva
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <script type="text/javascript">
+                $(document).ready(function() {
+                    var precio_hora = <t t-esc="cancha.precio_hora"/>;
+                    
+                    function calcularTotal() {
+                        var hora_inicio = parseFloat($('input[name="hora_inicio"]').val());
+                        var hora_fin = parseFloat($('#hora_fin').val());
+                        var duracion = hora_fin - hora_inicio;
+                        var total = duracion * precio_hora;
+                        $('#total_pago').text(total.toFixed(2));
+                    }
+                    
+                    $('#hora_fin').on('change', calcularTotal);
+                    calcularTotal();
+                });
+            </script>
+        </t>
+    </template>
+</odoo>

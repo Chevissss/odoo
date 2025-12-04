@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Assets para CSS y JS personalizados -->
+    <template id="assets_frontend" inherit_id="website.assets_frontend">
+        <xpath expr="." position="inside">
+            <link rel="stylesheet" href="/reserva_canchas/static/src/css/reservas.css"/>
+            <script type="text/javascript" src="/reserva_canchas/static/src/js/reservas.js"/>
+        </xpath>
+    </template>
+
+    <!-- Menú superior del sitio web -->
+    <template id="website_menu" inherit_id="website.layout">
+        <xpath expr="//header//ul[@id='top_menu']" position="inside">
+            <li class="nav-item">
+                <a href="/reservas" class="nav-link">
+                    <i class="fa fa-futbol-o"/> Reservar Cancha
+                </a>
+            </li>
+            <li class="nav-item" t-if="request.env.user._is_public()">
+                <a href="/web/login" class="nav-link">
+                    <i class="fa fa-sign-in"/> Iniciar Sesión
+                </a>
+            </li>
+            <li class="nav-item" t-if="not request.env.user._is_public()">
+                <a href="/mis-reservas" class="nav-link">
+                    <i class="fa fa-calendar"/> Mis Reservas
+                </a>
+            </li>
+        </xpath>
+    </template>
+
+    <!-- Página principal: Lista de canchas disponibles -->
+    <template id="website_canchas_template" name="Canchas Disponibles">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <!-- Hero Section -->
+                <section class="s_banner pt-5 pb-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-lg-12 text-center text-white">
+                                <h1 class="display-4 mb-3">
+                                    <i class="fa fa-futbol-o"/> Reserva tu Cancha Deportiva
+                                </h1>
+                                <p class="lead mb-4">
+                                    Encuentra y reserva la cancha perfecta para tu deporte favorito
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Filtros -->
+                <section class="pt-4 pb-2 bg-light">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="btn-group mb-3" role="group">
+                                    <button type="button" class="btn btn-outline-primary active" data-filter="all">
+                                        Todas las Canchas
+                                    </button>
+                                    <t t-foreach="tipos_deporte" t-as="tipo">
+                                        <button type="button" class="btn btn-outline-primary" t-att-data-filter="tipo[0]">
+                                            <t t-esc="tipo[1]"/>
+                                        </button>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Grid de Canchas -->
+                <section class="pt-4 pb-5">
+                    <div class="container">
+                        <div class="row" id="canchas-grid">
+                            <t t-foreach="canchas" t-as="cancha">
+                                <div class="col-lg-4 col-md-6 mb-4 cancha-item" t-att-data-deporte="cancha.tipo_deporte">
+                                    <div class="card h-100 shadow-sm hover-shadow">
+                                        <t t-if="cancha.imagen">
+                                            <img t-att-src="'data:image/png;base64,%s' % cancha.imagen.decode('utf-8')" 
+                                                 class="card-img-top" alt="Cancha" style="height: 200px; object-fit: cover;"/>
+                                        </t>
+                                        <t t-else="">
+                                            <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" 
+                                                 style="height: 200px;">
+                                                <i class="fa fa-image fa-3x text-white"/>
+                                            </div>
+                                        </t>
+                                        
+                                        <div class="card-body">
+                                            <h5 class="card-title">
+                                                <t t-esc="cancha.name"/>
+                                            </h5>
+                                            <p class="card-text">
+                                                <span class="badge badge-primary mb-2">
+                                                    <t t-esc="dict(cancha._fields['tipo_deporte'].selection).get(cancha.tipo_deporte)"/>
+                                                </span>
+                                                <br/>
+                                                <small class="text-muted">
+                                                    <i class="fa fa-users"/> Capacidad: <t t-esc="cancha.capacidad"/> jugadores
+                                                </small>
+                                            </p>
+                                            
+                                            <!-- Características -->
+                                            <div class="mb-3">
+                                                <t t-if="cancha.techada">
+                                                    <span class="badge badge-info mr-1">
+                                                        <i class="fa fa-home"/> Techada
+                                                    </span>
+                                                </t>
+                                                <t t-if="cancha.iluminacion">
+                                                    <span class="badge badge-warning mr-1">
+                                                        <i class="fa fa-lightbulb-o"/> Iluminación
+                                                    </span>
+                                                </t>
+                                                <t t-if="cancha.vestuarios">
+                                                    <span class="badge badge-success mr-1">
+                                                        <i class="fa fa-bath"/> Vestuarios
+                                                    </span>
+                                                </t>
+                                            </div>
+                                            
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="h5 mb-0 text-primary">
+                                                    S/ <t t-esc="'%.2f' % cancha.precio_hora"/> /hora
+                                                </span>
+                                                <a t-attf-href="/reservas/cancha/#{cancha.id}" 
+                                                   class="btn btn-primary">
+                                                    Ver Disponibilidad
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                        
+                        <!-- Mensaje si no hay canchas -->
+                        <div class="row" t-if="not canchas">
+                            <div class="col-lg-12 text-center py-5">
+                                <i class="fa fa-frown-o fa-5x text-muted mb-3"/>
+                                <h3>No hay canchas disponibles en este momento</h3>
+                                <p class="text-muted">Por favor, vuelve más tarde</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Sección de beneficios -->
+                <section class="pt-5 pb-5 bg-light">
+                    <div class="container">
+                        <div class="row text-center">
+                            <div class="col-lg-4 mb-4">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body">
+                                        <i class="fa fa-clock-o fa-3x text-primary mb-3"/>
+                                        <h5>Reserva 24/7</h5>
+                                        <p class="text-muted">Realiza tu reserva en cualquier momento del día</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 mb-4">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body">
+                                        <i class="fa fa-check-circle fa-3x text-success mb-3"/>
+                                        <h5>Confirmación Instantánea</h5>
+                                        <p class="text-muted">Recibe confirmación inmediata de tu reserva</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 mb-4">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body">
+                                        <i class="fa fa-shield fa-3x text-info mb-3"/>
+                                        <h5>Pago Seguro</h5>
+                                        <p class="text-muted">Múltiples métodos de pago disponibles</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </t>
+    </template>
+</odoo>

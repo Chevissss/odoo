@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Dashboard Template -->
+    <template id="dashboard_template" name="Dashboard de Reservas">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <section class="pt-5 pb-5">
+                    <div class="container-fluid">
+                        <div class="row mb-4">
+                            <div class="col-lg-12">
+                                <h2><i class="fa fa-dashboard"/> Dashboard de Reservas</h2>
+                                <p class="text-muted">Estadísticas y métricas del sistema</p>
+                            </div>
+                        </div>
+
+                        <!-- Tarjetas de Estadísticas -->
+                        <div class="row mb-4">
+                            <div class="col-lg-3 col-md-6 mb-3">
+                                <div class="card border-left-primary shadow h-100">
+                                    <div class="card-body">
+                                        <div class="row no-gutters align-items-center">
+                                            <div class="col mr-2">
+                                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                                    Reservas Hoy
+                                                </div>
+                                                <div class="h3 mb-0 font-weight-bold text-gray-800">
+                                                    <t t-esc="reservas_hoy"/>
+                                                </div>
+                                            </div>
+                                            <div class="col-auto">
+                                                <i class="fa fa-calendar fa-2x text-gray-300"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-6 mb-3">
+                                <div class="card border-left-success shadow h-100">
+                                    <div class="card-body">
+                                        <div class="row no-gutters align-items-center">
+                                            <div class="col mr-2">
+                                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                                    Reservas del Mes
+                                                </div>
+                                                <div class="h3 mb-0 font-weight-bold text-gray-800">
+                                                    <t t-esc="reservas_mes"/>
+                                                </div>
+                                            </div>
+                                            <div class="col-auto">
+                                                <i class="fa fa-check-circle fa-2x text-gray-300"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-6 mb-3">
+                                <div class="card border-left-info shadow h-100">
+                                    <div class="card-body">
+                                        <div class="row no-gutters align-items-center">
+                                            <div class="col mr-2">
+                                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                                    Ingresos del Mes
+                                                </div>
+                                                <div class="h3 mb-0 font-weight-bold text-gray-800">
+                                                    S/ <t t-esc="'%.2f' % ingresos_mes"/>
+                                                </div>
+                                            </div>
+                                            <div class="col-auto">
+                                                <i class="fa fa-money fa-2x text-gray-300"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-6 mb-3">
+                                <div class="card border-left-warning shadow h-100">
+                                    <div class="card-body">
+                                        <div class="row no-gutters align-items-center">
+                                            <div class="col mr-2">
+                                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                                    Total Canchas
+                                                </div>
+                                                <div class="h3 mb-0 font-weight-bold text-gray-800">
+                                                    <t t-esc="total_canchas"/>
+                                                </div>
+                                            </div>
+                                            <div class="col-auto">
+                                                <i class="fa fa-futbol-o fa-2x text-gray-300"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Gráfico de Reservas por Día -->
+                            <div class="col-lg-8 mb-4">
+                                <div class="card shadow">
+                                    <div class="card-header py-3">
+                                        <h6 class="m-0 font-weight-bold text-primary">
+                                            <i class="fa fa-line-chart"/> Reservas Últimos 7 Días
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="chartReservas" height="80"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Horarios Más Populares -->
+                            <div class="col-lg-4 mb-4">
+                                <div class="card shadow">
+                                    <div class="card-header py-3">
+                                        <h6 class="m-0 font-weight-bold text-primary">
+                                            <i class="fa fa-clock-o"/> Horarios Populares
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <t t-if="horarios_populares">
+                                            <ul class="list-unstyled">
+                                                <t t-foreach="horarios_populares" t-as="horario">
+                                                    <li class="mb-3">
+                                                        <div class="d-flex justify-content-between">
+                                                            <span>
+                                                                <t t-esc="'%02d:00' % horario[0]"/>
+                                                            </span>
+                                                            <span class="badge badge-primary">
+                                                                <t t-esc="horario[1]"/> reservas
+                                                            </span>
+                                                        </div>
+                                                        <div class="progress mt-1" style="height: 5px;">
+                                                            <div class="progress-bar bg-primary" 
+                                                                 t-att-style="'width: %s%%' % (horario[1] * 10)"></div>
+                                                        </div>
+                                                    </li>
+                                                </t>
+                                            </ul>
+                                        </t>
+                                        <t t-else="">
+                                            <p class="text-muted">No hay datos disponibles</p>
+                                        </t>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Top Canchas -->
+                            <div class="col-lg-6 mb-4">
+                                <div class="card shadow">
+                                    <div class="card-header py-3">
+                                        <h6 class="m-0 font-weight-bold text-primary">
+                                            <i class="fa fa-trophy"/> Top Canchas Más Reservadas
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>#</th>
+                                                        <th>Cancha</th>
+                                                        <th>Reservas</th>
+                                                        <th>Ingresos</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <t t-foreach="cancha_stats" t-as="stat">
+                                                        <tr>
+                                                            <td><t t-esc="stat_index + 1"/></td>
+                                                            <td><t t-esc="stat['nombre']"/></td>
+                                                            <td>
+                                                                <span class="badge badge-success">
+                                                                    <t t-esc="stat['reservas']"/>
+                                                                </span>
+                                                            </td>
+                                                            <td>S/ <t t-esc="'%.2f' % stat['ingresos']"/></td>
+                                                        </tr>
+                                                    </t>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Top Clientes -->
+                            <div class="col-lg-6 mb-4">
+                                <div class="card shadow">
+                                    <div class="card-header py-3">
+                                        <h6 class="m-0 font-weight-bold text-primary">
+                                            <i class="fa fa-users"/> Top Clientes Frecuentes
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>#</th>
+                                                        <th>Cliente</th>
+                                                        <th>Reservas</th>
+                                                        <th>Total Gastado</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <t t-foreach="clientes_top" t-as="cliente">
+                                                        <tr>
+                                                            <td><t t-esc="cliente_index + 1"/></td>
+                                                            <td><t t-esc="cliente.name"/></td>
+                                                            <td>
+                                                                <span class="badge badge-info">
+                                                                    <t t-esc="cliente.total_reservas"/>
+                                                                </span>
+                                                            </td>
+                                                            <td>S/ <t t-esc="'%.2f' % cliente.total_gastado"/></td>
+                                                        </tr>
+                                                    </t>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Acciones Rápidas -->
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="card shadow">
+                                    <div class="card-header py-3">
+                                        <h6 class="m-0 font-weight-bold text-primary">
+                                            <i class="fa fa-bolt"/> Acciones Rápidas
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row text-center">
+                                            <div class="col-md-3 mb-3">
+                                                <a href="/web#action=reserva_canchas.action_reserva" 
+                                                   class="btn btn-primary btn-lg btn-block">
+                                                    <i class="fa fa-calendar-plus-o fa-2x mb-2 d-block"/>
+                                                    Nueva Reserva
+                                                </a>
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <a href="/web#action=reserva_canchas.action_cancha" 
+                                                   class="btn btn-success btn-lg btn-block">
+                                                    <i class="fa fa-plus-circle fa-2x mb-2 d-block"/>
+                                                    Nueva Cancha
+                                                </a>
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <a href="/web#action=reserva_canchas.action_cliente" 
+                                                   class="btn btn-info btn-lg btn-block">
+                                                    <i class="fa fa-user-plus fa-2x mb-2 d-block"/>
+                                                    Nuevo Cliente
+                                                </a>
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <a href="/web#menu_id=reserva_canchas.menu_reserva_reportes" 
+                                                   class="btn btn-warning btn-lg btn-block">
+                                                    <i class="fa fa-bar-chart fa-2x mb-2 d-block"/>
+                                                    Ver Reportes
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Chart.js para gráficos -->
+            <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+            <script type="text/javascript">
+                var reservasPorDia = <t t-esc="json.dumps(reservas_por_dia)"/>;
+                
+                var ctx = document.getElementById('chartReservas').getContext('2d');
+                var myChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: reservasPorDia.map(d => d.fecha),
+                        datasets: [{
+                            label: 'Reservas',
+                            data: reservasPorDia.map(d => d.count),
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+            </script>
+
+            <style>
+                .border-left-primary {
+                    border-left: 4px solid #4e73df !important;
+                }
+                .border-left-success {
+                    border-left: 4px solid #1cc88a !important;
+                }
+                .border-left-info {
+                    border-left: 4px solid #36b9cc !important;
+                }
+                .border-left-warning {
+                    border-left: 4px solid #f6c23e !important;
+                }
+            </style>
+        </t>
+    </template>
+
+    <!-- Agregar enlace al dashboard en el menú -->
+    <template id="dashboard_menu_link" inherit_id="reserva_canchas.website_menu">
+        <xpath expr="//ul[@id='top_menu']" position="inside">
+            <li class="nav-item" groups="reserva_canchas.group_reserva_admin">
+                <a href="/reservas/dashboard" class="nav-link">
+                    <i class="fa fa-dashboard"/> Dashboard
+                </a>
+            </li>
+        </xpath>
+    </template>
+</odoo>

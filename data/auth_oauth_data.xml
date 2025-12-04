@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Proveedor OAuth para Google -->
+        <record id="provider_google_reservas" model="auth.oauth.provider">
+            <field name="name">Google Reservas</field>
+            <field name="client_id">YOUR_GOOGLE_CLIENT_ID</field>
+            <field name="body">Login con Google</field>
+            <field name="auth_endpoint">https://accounts.google.com/o/oauth2/v2/auth</field>
+            <field name="scope">openid email profile</field>
+            <field name="validation_endpoint">https://www.googleapis.com/oauth2/v3/tokeninfo</field>
+            <field name="data_endpoint">https://www.googleapis.com/oauth2/v1/userinfo</field>
+            <field name="enabled" eval="True"/>
+            <field name="css_class">fa fa-google</field>
+            <field name="body">Iniciar sesión con Google</field>
+        </record>
+
+        <!-- Página de inicio después del login -->
+        <record id="base.default_user" model="res.users">
+            <field name="action_id" ref="action_reserva"/>
+        </record>
+    </data>
+</odoo>
