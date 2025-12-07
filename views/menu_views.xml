@@ -1,52 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Menú Principal -->
-    <menuitem id="menu_reserva_root" 
-              name="Reserva Canchas" 
-              sequence="10"
-              web_icon="reserva_canchas,static/description/icon.png"/>
-
-    <!-- Menú Operaciones -->
-    <menuitem id="menu_reserva_operaciones" 
-              name="Operaciones" 
-              parent="menu_reserva_root" 
-              sequence="10"/>
-
-    <menuitem id="menu_reserva_reservas" 
-              name="Reservas" 
-              parent="menu_reserva_operaciones" 
-              action="action_reserva" 
-              sequence="10"/>
-
-    <menuitem id="menu_reserva_nueva_reserva" 
-              name="Nueva Reserva" 
-              parent="menu_reserva_operaciones" 
-              action="action_reserva" 
-              sequence="11"/>
-
-    <!-- Menú Configuración -->
-    <menuitem id="menu_reserva_configuracion" 
-              name="Configuración" 
-              parent="menu_reserva_root" 
-              sequence="20"
-              groups="group_reserva_admin"/>
-
-    <menuitem id="menu_reserva_canchas" 
-              name="Canchas" 
-              parent="menu_reserva_configuracion" 
-              action="action_cancha" 
-              sequence="10"
-              groups="group_reserva_admin"/>
-
-    <menuitem id="menu_reserva_clientes" 
-              name="Clientes" 
-              parent="menu_reserva_configuracion" 
-              action="action_cliente" 
-              sequence="20"/>
-
-    <!-- Menú Reportes -->
-    <menuitem id="menu_reserva_reportes" 
-              name="Reportes" 
-              parent="menu_reserva_root" 
-              sequence="30"/>
+    <!-- Menú principal -->
+    <menuitem id="menu_reserva_root" name="Reserva Canchas" 
+              groups="reserva_canchas.group_reserva_admin,reserva_canchas.group_reserva_staff"/>
+    
+    <!-- Operaciones -->
+    <menuitem id="menu_operaciones" name="Operaciones" parent="menu_reserva_root"/>
+    
+    <menuitem id="menu_nueva_reserva" name="Nueva Reserva" 
+              parent="menu_operaciones" action="action_reserva"/>
+    
+    <menuitem id="menu_mis_clientes" name="Clientes" 
+              parent="menu_operaciones" action="action_cliente"/>
+    
+    <!-- Configuración -->
+    <menuitem id="menu_configuracion" name="Configuración" parent="menu_reserva_root"/>
+    
+    <menuitem id="menu_canchas" name="Canchas" 
+              parent="menu_configuracion" action="reserva_canchas.action_cancha"/>
+    
+    <!-- Reportes -->
+    <menuitem id="menu_reportes" name="Reportes" parent="menu_reserva_root"
+              groups="reserva_canchas.group_reserva_admin"/>
+    
+    <menuitem id="menu_dashboard" name="Dashboard" 
+              parent="menu_reportes" action="action_dashboard"/>
 </odoo>

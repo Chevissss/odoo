@@ -1,232 +1,249 @@
-from odoo import http, _
+from odoo import http, fields
 from odoo.http import request
-from datetime import datetime, timedelta, date
 import json
+import logging
+from datetime import datetime, timedelta
 
-class ReservaCanchasWebsite(http.Controller):
-    
-    @http.route(['/reservas', '/reservas/canchas'], type='http', auth='public', website=True)
-    def canchas_disponibles(self, **kwargs):
-        """Página principal con lista de canchas disponibles"""
-        canchas = request.env['reserva.cancha'].sudo().search([
-            ('estado', '=', 'disponible')
-        ], order='name')
-        
-        # Obtener tipos de deporte únicos
-        tipos_deporte = canchas.mapped('tipo_deporte')
-        tipos_deporte_dict = dict(request.env['reserva.cancha']._fields['tipo_deporte'].selection)
-        
-        values = {
-            'canchas': canchas,
-            'tipos_deporte': [(tipo, tipos_deporte_dict.get(tipo)) for tipo in set(tipos_deporte)],
-            'page_name': 'canchas',
-        }
-        return request.render('reserva_canchas.website_canchas_template', values)
-    
-    @http.route(['/reservas/cancha/<int:cancha_id>'], type='http', auth='public', website=True)
-    def cancha_detalle(self, cancha_id, **kwargs):
-        """Detalle de una cancha específica"""
-        cancha = request.env['reserva.cancha'].sudo().browse(cancha_id)
-        
-        if not cancha.exists() or cancha.estado != 'disponible':
-            return request.render('website.404')
-        
-        # Obtener horarios disponibles para hoy y los próximos 7 días
-        fecha_inicio = date.today()
-        fecha_fin = fecha_inicio + timedelta(days=7)
-        
-        values = {
-            'cancha': cancha,
-            'fecha_inicio': fecha_inicio,
-            'fecha_fin': fecha_fin,
-            'page_name': 'cancha_detalle',
-        }
-        return request.render('reserva_canchas.website_cancha_detalle_template', values)
-    
-    @http.route(['/reservas/disponibilidad'], type='json', auth='public', methods=['POST'])
-    def get_disponibilidad(self, cancha_id, fecha, **kwargs):
-        """API para obtener horarios disponibles de una cancha en una fecha específica"""
+_logger = logging.getLogger(__name__)
+
+class ReservaController(http.Controller):
+
+    @http.route('/reservas', auth='public', website=True)
+    def reservas_list(self, **kw):
+        """Página principal de canchas"""
         try:
-            cancha = request.env['reserva.cancha'].sudo().browse(int(cancha_id))
-            fecha_obj = datetime.strptime(fecha, '%Y-%m-%d').date()
+            Cancha = request.env['reserva.cancha'].sudo()
+            canchas = Cancha.search([('estado', '=', 'disponible')])
             
-            # No permitir reservas en el pasado
-            if fecha_obj < date.today():
-                return {'error': 'No se pueden hacer reservas en fechas pasadas'}
+            tipos_deporte = [('futbol', 'Fútbol'), ('futsal', 'Futsal'), ('basquet', 'Básquetbol'), 
+                            ('voley', 'Vóleibol'), ('tenis', 'Tenis'), ('padel', 'Pádel')]
             
-            # Obtener reservas existentes
-            reservas = request.env['reserva.reserva'].sudo().search([
-                ('cancha_id', '=', cancha.id),
-                ('fecha', '=', fecha_obj),
-                ('estado', 'in', ['confirmada', 'en_curso', 'borrador'])
-            ])
+            return request.render('reserva_canchas.website_canchas_template', {
+                'canchas': canchas,
+                'tipos_deporte': tipos_deporte,
+            })
+        except Exception as e:
+            _logger.error(f'Error en reservas_list: {str(e)}')
+            return request.render('reserva_canchas.website_error_template', {
+                'error': 'Error al cargar las canchas'
+            })
+
+    @http.route('/reservas/cancha/<int:cancha_id>', auth='public', website=True)
+    def cancha_detalle(self, cancha_id, **kw):
+        """Detalle de cancha y disponibilidad"""
+        try:
+            Cancha = request.env['reserva.cancha'].sudo()
+            cancha = Cancha.browse(cancha_id)
             
-            # Generar horarios (6 AM - 11 PM)
-            horarios_ocupados = []
-            for reserva in reservas:
-                horarios_ocupados.append({
-                    'inicio': reserva.hora_inicio,
-                    'fin': reserva.hora_fin
+            if not cancha.exists():
+                return request.render('reserva_canchas.website_error_template', {
+                    'error': 'Cancha no encontrada'
                 })
             
-            # Generar todos los horarios disponibles
-            horarios_disponibles = []
+            hoy = datetime.now().date()
+            fecha_inicio = hoy
+            fecha_fin = hoy + timedelta(days=30)
+            
+            return request.render('reserva_canchas.website_cancha_detalle_template', {
+                'cancha': cancha,
+                'fecha_inicio': fecha_inicio,
+                'fecha_fin': fecha_fin,
+            })
+        except Exception as e:
+            _logger.error(f'Error en cancha_detalle: {str(e)}')
+            return request.render('reserva_canchas.website_error_template', {
+                'error': 'Error al cargar el detalle de la cancha'
+            })
+
+    @http.route('/reservas/disponibilidad', auth='public', type='json', website=True)
+    def get_disponibilidad(self, cancha_id, fecha, **kw):
+        """API AJAX para obtener horarios disponibles"""
+        try:
+            Cancha = request.env['reserva.cancha'].sudo()
+            Reserva = request.env['reserva.reserva'].sudo()
+            
+            cancha = Cancha.browse(int(cancha_id))
+            if not cancha.exists() or cancha.estado != 'disponible':
+                return {'error': 'Cancha no disponible', 'horarios': []}
+            
+            fecha_obj = datetime.strptime(fecha, '%Y-%m-%d').date()
+            
+            # Validar que no sea fecha pasada
+            if fecha_obj < datetime.now().date():
+                return {'error': 'No puedes reservar en fechas pasadas', 'horarios': []}
+            
+            # Obtener reservas existentes
+            reservas_dia = Reserva.search([
+                ('cancha_id', '=', cancha.id),
+                ('fecha', '=', fecha_obj),
+                ('estado', 'in', ['confirmada', 'en_curso'])
+            ])
+            
+            horas_reservadas = set()
+            for res in reservas_dia:
+                for hora in range(int(res.hora_inicio), int(res.hora_fin)):
+                    horas_reservadas.add(hora)
+            
+            # Generar horarios (6 AM a 10 PM)
+            horarios = []
             for hora in range(6, 23):
-                ocupado = False
-                for ocupacion in horarios_ocupados:
-                    if hora >= ocupacion['inicio'] and hora < ocupacion['fin']:
-                        ocupado = True
-                        break
-                
-                horarios_disponibles.append({
+                horarios.append({
                     'hora': hora,
-                    'disponible': not ocupado,
+                    'disponible': hora not in horas_reservadas,
                     'precio': cancha.precio_hora
                 })
             
             return {
-                'horarios': horarios_disponibles,
-                'precio_hora': cancha.precio_hora,
-                'nombre_cancha': cancha.name
+                'horarios': horarios,
+                'error': None
             }
-            
         except Exception as e:
-            return {'error': str(e)}
-    
-    @http.route(['/reservas/crear'], type='http', auth='user', website=True, methods=['GET'])
-    def reserva_formulario(self, cancha_id=None, fecha=None, hora_inicio=None, **kwargs):
-        """Formulario para crear una reserva (requiere login)"""
-        if not cancha_id:
-            return request.redirect('/reservas')
-        
-        cancha = request.env['reserva.cancha'].sudo().browse(int(cancha_id))
-        
-        if not cancha.exists():
-            return request.redirect('/reservas')
-        
-        # Buscar o crear cliente para el usuario actual
-        partner = request.env.user.partner_id
-        cliente = request.env['reserva.cliente'].sudo().search([
-            '|', ('email', '=', partner.email),
-            ('user_id', '=', request.env.user.id)
-        ], limit=1)
-        
-        values = {
-            'cancha': cancha,
-            'fecha': fecha or date.today().strftime('%Y-%m-%d'),
-            'hora_inicio': hora_inicio or 10,
-            'cliente': cliente,
-            'partner': partner,
-            'page_name': 'crear_reserva',
-        }
-        return request.render('reserva_canchas.website_crear_reserva_template', values)
-    
-    @http.route(['/reservas/confirmar'], type='http', auth='user', website=True, methods=['POST'], csrf=True)
-    def reserva_confirmar(self, **post):
-        """Procesar la creación de una reserva"""
+            _logger.error(f'Error en get_disponibilidad: {str(e)}')
+            return {'error': str(e), 'horarios': []}
+
+    @http.route('/reservas/crear', auth='user', website=True)
+    def crear_reserva(self, cancha_id=None, fecha=None, hora_inicio=None, hora_fin=None, **kw):
+        """Formulario de creación de reserva"""
         try:
-            # Buscar o crear cliente
-            partner = request.env.user.partner_id
-            cliente = request.env['reserva.cliente'].sudo().search([
-                '|', ('email', '=', partner.email),
-                ('user_id', '=', request.env.user.id)
-            ], limit=1)
+            user = request.env.user
+            partner = user.partner_id
+            
+            cancha = request.env['reserva.cancha'].sudo().browse(int(cancha_id)) if cancha_id else None
+            
+            Cliente = request.env['reserva.cliente']
+            cliente = Cliente.search([('partner_id', '=', partner.id)], limit=1)
             
             if not cliente:
-                cliente = request.env['reserva.cliente'].sudo().create({
+                cliente = Cliente.create({
                     'name': partner.name,
                     'email': partner.email,
-                    'telefono': post.get('telefono', partner.phone or ''),
-                    'user_id': request.env.user.id,
-                    'tipo_cliente': 'nuevo'
+                    'telefono': partner.phone or '',
+                    'partner_id': partner.id
                 })
             
-            # Crear la reserva
-            fecha = datetime.strptime(post.get('fecha'), '%Y-%m-%d').date()
-            hora_inicio = float(post.get('hora_inicio'))
-            hora_fin = float(post.get('hora_fin'))
-            
-            reserva = request.env['reserva.reserva'].sudo().create({
-                'cliente_id': cliente.id,
-                'cancha_id': int(post.get('cancha_id')),
+            return request.render('reserva_canchas.website_crear_reserva_template', {
+                'cancha': cancha,
+                'partner': partner,
+                'cliente': cliente,
                 'fecha': fecha,
                 'hora_inicio': hora_inicio,
                 'hora_fin': hora_fin,
-                'tipo_reserva': 'online',
-                'notas': post.get('notas', ''),
-                'estado': 'borrador'
             })
-            
-            # Confirmar automáticamente
-            reserva.action_confirmar()
-            
-            return request.redirect('/reservas/confirmacion/%s' % reserva.id)
-            
         except Exception as e:
+            _logger.error(f'Error en crear_reserva: {str(e)}')
             return request.render('reserva_canchas.website_error_template', {
-                'error': str(e),
-                'page_name': 'error'
+                'error': f'Error al crear la reserva: {str(e)}'
             })
-    
-    @http.route(['/reservas/confirmacion/<int:reserva_id>'], type='http', auth='user', website=True)
-    def reserva_confirmacion(self, reserva_id, **kwargs):
-        """Página de confirmación de reserva"""
-        reserva = request.env['reserva.reserva'].sudo().browse(reserva_id)
-        
-        if not reserva.exists():
-            return request.redirect('/reservas')
-        
-        # Verificar que el usuario sea el dueño de la reserva
-        if reserva.cliente_id.user_id.id != request.env.user.id:
-            return request.redirect('/reservas')
-        
-        values = {
-            'reserva': reserva,
-            'page_name': 'confirmacion',
-        }
-        return request.render('reserva_canchas.website_confirmacion_template', values)
-    
-    @http.route(['/mis-reservas'], type='http', auth='user', website=True)
-    def mis_reservas(self, **kwargs):
-        """Portal del usuario con sus reservas"""
-        partner = request.env.user.partner_id
-        cliente = request.env['reserva.cliente'].sudo().search([
-            '|', ('email', '=', partner.email),
-            ('user_id', '=', request.env.user.id)
-        ], limit=1)
-        
-        reservas = request.env['reserva.reserva'].sudo().search([
-            ('cliente_id', '=', cliente.id)
-        ], order='fecha desc, hora_inicio desc')
-        
-        # Separar reservas activas y pasadas
-        hoy = date.today()
-        reservas_activas = reservas.filtered(
-            lambda r: r.fecha >= hoy and r.estado in ['confirmada', 'borrador', 'en_curso']
-        )
-        reservas_pasadas = reservas.filtered(
-            lambda r: r.fecha < hoy or r.estado in ['completada', 'cancelada', 'no_asistio']
-        )
-        
-        values = {
-            'cliente': cliente,
-            'reservas_activas': reservas_activas,
-            'reservas_pasadas': reservas_pasadas,
-            'page_name': 'mis_reservas',
-        }
-        return request.render('reserva_canchas.website_mis_reservas_template', values)
-    
-    @http.route(['/reservas/cancelar/<int:reserva_id>'], type='http', auth='user', website=True, methods=['POST'], csrf=True)
-    def cancelar_reserva(self, reserva_id, **kwargs):
+
+    @http.route('/reservas/confirmar', auth='user', type='http', website=True, methods=['POST'])
+    def confirmar_reserva(self, **post):
+        """Procesar confirmación de reserva"""
+        try:
+            Reserva = request.env['reserva.reserva']
+            Cliente = request.env['reserva.cliente']
+            
+            user = request.env.user
+            partner = user.partner_id
+            
+            # Obtener o crear cliente
+            cliente = Cliente.search([('partner_id', '=', partner.id)], limit=1)
+            if not cliente:
+                cliente = Cliente.create({
+                    'name': partner.name,
+                    'email': partner.email,
+                    'telefono': post.get('telefono', partner.phone or ''),
+                    'partner_id': partner.id
+                })
+            
+            # Crear reserva
+            reserva = Reserva.create({
+                'cliente_id': cliente.id,
+                'cancha_id': int(post.get('cancha_id')),
+                'fecha': post.get('fecha'),
+                'hora_inicio': float(post.get('hora_inicio', 0)),
+                'hora_fin': float(post.get('hora_fin', 0)),
+                'notas': post.get('notas', ''),
+                'estado': 'confirmada',
+                'partner_id': partner.id
+            })
+            
+            return request.redirect(f'/reservas/confirmacion/{reserva.id}')
+        except Exception as e:
+            _logger.error(f'Error en confirmar_reserva: {str(e)}')
+            return request.render('reserva_canchas.website_error_template', {
+                'error': f'Error al confirmar la reserva: {str(e)}'
+            })
+
+    @http.route('/reservas/confirmacion/<int:reserva_id>', auth='user', website=True)
+    def confirmacion(self, reserva_id, **kw):
+        """Página de confirmación"""
+        try:
+            reserva = request.env['reserva.reserva'].browse(reserva_id)
+            
+            if not reserva.exists():
+                return request.render('reserva_canchas.website_error_template', {
+                    'error': 'Reserva no encontrada'
+                })
+            
+            return request.render('reserva_canchas.website_confirmacion_template', {
+                'reserva': reserva,
+            })
+        except Exception as e:
+            _logger.error(f'Error en confirmacion: {str(e)}')
+            return request.render('reserva_canchas.website_error_template', {
+                'error': 'Error al cargar la confirmación'
+            })
+
+    @http.route('/mis-reservas', auth='user', website=True)
+    def mis_reservas(self, **kw):
+        """Lista de reservas del usuario"""
+        try:
+            user = request.env.user
+            partner = user.partner_id
+            
+            Reserva = request.env['reserva.reserva']
+            Cliente = request.env['reserva.cliente']
+            
+            cliente = Cliente.search([('partner_id', '=', partner.id)], limit=1)
+            
+            if not cliente:
+                reservas_activas = []
+                reservas_pasadas = []
+            else:
+                hoy = datetime.now().date()
+                reservas_activas = Reserva.search([
+                    ('cliente_id', '=', cliente.id),
+                    ('fecha', '>=', hoy),
+                    ('estado', 'in', ['confirmada', 'en_curso', 'borrador'])
+                ], order='fecha ASC')
+                
+                reservas_pasadas = Reserva.search([
+                    ('cliente_id', '=', cliente.id),
+                    ('estado', 'in', ['completada', 'cancelada', 'no_asistio'])
+                ], order='fecha DESC')
+            
+            return request.render('reserva_canchas.website_mis_reservas_template', {
+                'cliente': cliente,
+                'reservas_activas': reservas_activas,
+                'reservas_pasadas': reservas_pasadas,
+            })
+        except Exception as e:
+            _logger.error(f'Error en mis_reservas: {str(e)}')
+            return request.render('reserva_canchas.website_error_template', {
+                'error': 'Error al cargar tus reservas'
+            })
+
+    @http.route('/reservas/cancelar/<int:reserva_id>', auth='user', type='http', website=True, methods=['POST'])
+    def cancelar_reserva(self, reserva_id, **post):
         """Cancelar una reserva"""
-        reserva = request.env['reserva.reserva'].sudo().browse(reserva_id)
-        
-        # Verificar que el usuario sea el dueño
-        if reserva.cliente_id.user_id.id != request.env.user.id:
+        try:
+            reserva = request.env['reserva.reserva'].browse(reserva_id)
+            
+            if reserva.exists() and reserva.estado in ['confirmada', 'borrador']:
+                reserva.action_cancelar()
+                return request.redirect('/mis-reservas?cancelled=1')
+            else:
+                return request.redirect('/mis-reservas')
+        except Exception as e:
+            _logger.error(f'Error en cancelar_reserva: {str(e)}')
             return request.redirect('/mis-reservas')
-        
-        # Solo se pueden cancelar reservas confirmadas o en borrador
-        if reserva.estado in ['confirmada', 'borrador']:
-            reserva.action_cancelar()
-        
-        return request.redirect('/mis-reservas?cancelled=true')

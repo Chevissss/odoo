@@ -3,6 +3,9 @@ odoo.define('reserva_canchas.reservas', function (require) {
 
     var publicWidget = require('web.public.widget');
     var ajax = require('web.ajax');
+    var core = require('web.core');
+
+    var _t = core._t;
 
     // Widget para filtrado de canchas
     publicWidget.registry.CanchasFiltro = publicWidget.Widget.extend({
@@ -21,16 +24,14 @@ odoo.define('reserva_canchas.reservas', function (require) {
             var $button = $(ev.currentTarget);
             var filter = $button.data('filter');
 
-            // Actualizar botones activos
             $button.siblings().removeClass('active');
             $button.addClass('active');
 
-            // Filtrar canchas
             if (filter === 'all') {
                 this.canchas.fadeIn();
             } else {
-                this.canchas.each(function () {
-                    var $cancha = $(this);
+                this.canchas.each((i, el) => {
+                    var $cancha = $(el);
                     if ($cancha.data('deporte') === filter) {
                         $cancha.fadeIn();
                     } else {
@@ -43,7 +44,7 @@ odoo.define('reserva_canchas.reservas', function (require) {
 
     // Widget para disponibilidad de horarios
     publicWidget.registry.DisponibilidadHorarios = publicWidget.Widget.extend({
-        selector: '.oe_website_sale',
+        selector: 'body',
         events: {
             'change #fecha_reserva': '_onFechaChange',
             'click .horario-slot.disponible': '_onHorarioClick',
@@ -52,19 +53,17 @@ odoo.define('reserva_canchas.reservas', function (require) {
 
         start: function () {
             this._super.apply(this, arguments);
+            this.horariosSeleccionados = [];
             
-            // Cargar horarios iniciales si estamos en la página de detalle
             if ($('#fecha_reserva').length && typeof cancha_id !== 'undefined') {
                 this._cargarHorarios();
             }
-
-            this.horariosSeleccionados = [];
         },
 
         _onFechaChange: function () {
             this.horariosSeleccionados = [];
-            $('#seleccion_info').hide();
-            $('#btn_reservar').hide();
+            $('#seleccion_info').fadeOut();
+            $('#btn_reservar').fadeOut();
             this._cargarHorarios();
         },
 
@@ -76,7 +75,6 @@ odoo.define('reserva_canchas.reservas', function (require) {
                 return;
             }
 
-            // Mostrar loader
             $('#horarios_disponibles').html(
                 '<div class="text-center py-4">' +
                 '<div class="spinner-border text-primary" role="status"></div>' +
@@ -84,27 +82,45 @@ odoo.define('reserva_canchas.reservas', function (require) {
                 '</div>'
             );
 
-            // Llamar al servidor
-            ajax.jsonRpc('/reservas/disponibilidad', 'call', {
-                cancha_id: cancha_id,
-                fecha: fecha
-            }).then(function (result) {
-                if (result.error) {
+            // Llamada AJAX corregida
+            $.ajax({
+                url: '/reservas/disponibilidad',
+                type: 'POST',
+                dataType: 'json',
+                data: JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: 'call',
+                    params: {
+                        cancha_id: cancha_id,
+                        fecha: fecha
+                    }
+                }),
+                contentType: 'application/json',
+                timeout: 5000,
+                headers: {
+                    'X-CSRF-Token': $('input[name="csrf_token"]').val() || $('input[name="__o_csrf"]').val()
+                },
+                success: function(response) {
+                    if (response.result && response.result.horarios) {
+                        self._renderHorarios(response.result.horarios);
+                    } else if (response.error) {
+                        $('#horarios_disponibles').html(
+                            '<div class="alert alert-warning">' +
+                            '<i class="fa fa-exclamation-triangle"></i> ' + 
+                            (response.error.message || response.error) +
+                            '</div>'
+                        );
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', error);
                     $('#horarios_disponibles').html(
                         '<div class="alert alert-danger">' +
-                        '<i class="fa fa-exclamation-triangle"></i> ' + result.error +
+                        '<i class="fa fa-exclamation-triangle"></i> ' +
+                        'Error al cargar horarios. Por favor, intenta de nuevo.' +
                         '</div>'
                     );
-                    return;
                 }
-
-                self._renderHorarios(result.horarios);
-            }).catch(function (error) {
-                $('#horarios_disponibles').html(
-                    '<div class="alert alert-danger">' +
-                    '<i class="fa fa-exclamation-triangle"></i> Error al cargar horarios' +
-                    '</div>'
-                );
             });
         },
 
@@ -136,12 +152,10 @@ odoo.define('reserva_canchas.reservas', function (require) {
             var $slot = $(ev.currentTarget);
             var hora = parseInt($slot.data('hora'));
 
-            // Si ya está seleccionado, deseleccionar
             if ($slot.hasClass('seleccionado')) {
                 this.horariosSeleccionados = this.horariosSeleccionados.filter(h => h !== hora);
                 $slot.removeClass('seleccionado');
             } else {
-                // Limitar a horarios consecutivos
                 if (this.horariosSeleccionados.length > 0) {
                     var ultimo = Math.max(...this.horariosSeleccionados);
                     if (hora !== ultimo + 1) {
@@ -154,18 +168,16 @@ odoo.define('reserva_canchas.reservas', function (require) {
                 $slot.addClass('seleccionado');
             }
 
-            // Actualizar información
             this._actualizarSeleccion();
         },
 
         _actualizarSeleccion: function () {
             if (this.horariosSeleccionados.length === 0) {
-                $('#seleccion_info').hide();
-                $('#btn_reservar').hide();
+                $('#seleccion_info').fadeOut();
+                $('#btn_reservar').fadeOut();
                 return;
             }
 
-            // Ordenar horarios
             this.horariosSeleccionados.sort((a, b) => a - b);
 
             var horaInicio = Math.min(...this.horariosSeleccionados);
@@ -190,9 +202,9 @@ odoo.define('reserva_canchas.reservas', function (require) {
             $('#info_duracion').text(duracion + ' hora' + (duracion > 1 ? 's' : ''));
             $('#info_total').text(total.toFixed(2));
 
-            $('#seleccion_info').show().addClass('fade-in');
+            $('#seleccion_info').fadeIn().addClass('fade-in');
             $('#btn_reservar')
-                .show()
+                .fadeIn()
                 .addClass('fade-in pulse')
                 .data('hora-inicio', horaInicio)
                 .data('hora-fin', horaFin);
@@ -205,7 +217,6 @@ odoo.define('reserva_canchas.reservas', function (require) {
             var horaFin = $btn.data('hora-fin');
             var fecha = $('#fecha_reserva').val();
 
-            // Redirigir al formulario de reserva
             window.location.href = '/reservas/crear?' +
                 'cancha_id=' + canchaId +
                 '&fecha=' + fecha +
@@ -214,28 +225,22 @@ odoo.define('reserva_canchas.reservas', function (require) {
         },
     });
 
-    // Animaciones al scroll
-    $(window).on('scroll', function () {
-        $('.fade-in').each(function () {
-            var elementTop = $(this).offset().top;
-            var elementBottom = elementTop + $(this).outerHeight();
-            var viewportTop = $(window).scrollTop();
-            var viewportBottom = viewportTop + $(window).height();
-
-            if (elementBottom > viewportTop && elementTop < viewportBottom) {
-                $(this).addClass('visible');
-            }
-        });
-    });
-
-    // Confirmación de formularios
-    $('form[data-confirm]').on('submit', function (e) {
-        var mensaje = $(this).data('confirm');
-        if (!confirm(mensaje)) {
+    // Validación de formularios
+    $(document).on('submit', 'form.needs-validation', function (e) {
+        if (!this.checkValidity()) {
             e.preventDefault();
-            return false;
+            e.stopPropagation();
         }
+        $(this).addClass('was-validated');
     });
+
+    // Auto-ocultar alertas
+    setTimeout(function () {
+        $('.alert-dismissible').fadeOut(300);
+    }, 5000);
+
+    // Tooltips
+    $('[data-toggle="tooltip"]').tooltip();
 
     return {
         CanchasFiltro: publicWidget.registry.CanchasFiltro,
@@ -245,23 +250,6 @@ odoo.define('reserva_canchas.reservas', function (require) {
 
 // Código adicional para páginas sin widget
 $(document).ready(function () {
-    // Auto-ocultar alertas después de 5 segundos
-    setTimeout(function () {
-        $('.alert-dismissible').fadeOut();
-    }, 5000);
-
-    // Validación de formularios
-    $('form.needs-validation').on('submit', function (e) {
-        if (!this.checkValidity()) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-        $(this).addClass('was-validated');
-    });
-
-    // Tooltips de Bootstrap
-    $('[data-toggle="tooltip"]').tooltip();
-
     // Smooth scroll para enlaces internos
     $('a[href^="#"]').on('click', function (e) {
         var target = $(this.getAttribute('href'));

@@ -1,6 +1,28 @@
 from odoo import http
 from odoo.http import request
-from odoo.addons.portal.controllers.portal import CustomerPortal
+import logging
+
+_logger = logging.getLogger(__name__)
+
+class PortalController(http.Controller):
+
+    @http.route('/portal/reservas', auth='user', website=True)
+    def portal_reservas(self, **kw):
+        """Panel de control del cliente en portal"""
+        try:
+            user = request.env.user
+            Reserva = request.env['reserva.reserva']
+            
+            mis_reservas = Reserva.search([
+                ('partner_id', '=', user.partner_id.id)
+            ], order='fecha DESC', limit=10)
+            
+            return request.render('reserva_canchas.portal_reservas_template', {
+                'reservas': mis_reservas,
+            })
+        except Exception as e:
+            _logger.error(f'Error en portal_reservas: {str(e)}')
+            return request.not_found()
 
 class ReservaPortal(CustomerPortal):
     
